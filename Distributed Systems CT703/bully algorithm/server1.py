@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import threading
+import threading 
 import requests
 import time
 
@@ -8,7 +8,7 @@ app = Flask(__name__)
 # configurations
 
 # unique id for this server
-server_id = 1
+server_id = 1 
 total_servers = 3
 servers = {
     1: "http://localhost:9001",
@@ -18,8 +18,7 @@ servers = {
 
 status = {
     "alive": True,
-    "coordinator": False,
-    "last_heartbeat": 0
+    "coordinator": False
 }
 
 coordinator_id = None
@@ -30,25 +29,25 @@ heartbeat_timeout = 6 # in seconds
 lock = threading.Lock()
 
 # API route
-@app.route("/heartbeat", methods=["POST"])
+@app.route("/heartbeat", methods = ["POST"])
 def heartbeat():
     global coordinator_id
     data = request.json
-    print(f"Received heartbeat from coordinator {data['coordinator_id']}")
+    print(f"Received heartbeat from coordinator {data["coordinator_id"]}")
     coordinator_id = data["coordinator_id"]
     with lock:
-        if data["coordinator_id"] == coordinator_id:
+        if data["coordinator_id"]  == coordinator_id:
             status["last_heartbeat"] = time.time()
             
     return jsonify({
         "message": "Heartbeat received."
     }), 200
-
-@app.route("/coordinator", methods=["POST"])
+    
+@app.route("/coordinator", methods = ["POST"])
 def coordinator():
     global coordinator_id
     data = request.json
-    print(f"Received coordinator message from {data['coordinator_id']}")
+    print(f"Received coordinator message from data {data["coordinator_id"]}")
     with lock:
         coordinator_id = data["coordinator_id"]
         status["coordinator"] = False
@@ -56,12 +55,12 @@ def coordinator():
     return jsonify({
         "message": "Coordinator Updated"
     }), 200
-
-@app.route("/start_election", methods=["POST"])
+    
+@app.route("/start_election", methods = ["POST"])
 def start_election():
     data = request.json
     candidate_id = data["candidate_id"]
-    print(f"Received election request from {data['candidate_id']}")
+    print(f"Received election request from {data["candidate_id"]}")
     with lock:
         if candidate_id < server_id:
             return jsonify({
@@ -70,7 +69,7 @@ def start_election():
         return jsonify({
             "message": "OK"
         }), 200
-
+        
 def send_heartbeat():
     global coordinator_id
     while True:
@@ -84,8 +83,7 @@ def send_heartbeat():
                             requests.post(f"{url}/heartbeat", json={"coordinator_id": coordinator_id})
                         except requests.ConnectionError:
                             print(f"Error sending heartbeat to server {sid}")
-                            pass
-
+                            
 def monitor_heartbeat():
     global coordinator_id
     while True:
@@ -95,12 +93,12 @@ def monitor_heartbeat():
                 print(f"No heartbeat received from coordinator {coordinator_id}. Starting election now.")
                 coordinator_id = None
                 start_election_process()
-
+                
             elif coordinator_id < server_id:
                 print(f"Server {server_id} which is higher than coordinator {coordinator_id} is active.")
                 coordinator_id = None
                 start_election_process()
-
+                
 def start_election_process():
     global coordinator_id
     coordinator_id = None
@@ -117,22 +115,25 @@ def start_election_process():
             except requests.ConnectionError:
                 print(f"Fail to contact server {sid} for election.")
                 pass
-
+            
     if not higher_id_exists:
         coordinator_id = server_id
         status["coordinator"] = True
         print(f"Server {server_id} is the new coordinator.")
         
-        for sid, url in servers.items():
+        for sid,url in servers.items():
             if sid != server_id:
                 try:
-                    response = requests.post(url + "/coordinator", json={"coordinator_id": coordinator_id})
+                    response = requests.post(url + "/coordinator", json = ({"coordinator_id": coordinator_id}))
                 except requests.ConnectionError:
                     pass
+                
 
 # start the main
 if __name__ == "__main__":
     threading.Thread(target=send_heartbeat, daemon=True).start()
     threading.Thread(target=monitor_heartbeat, daemon=True).start()
     
-    app.run(port=9000 + server_id)
+    app.run(
+        port = 9000 + server_id
+    )
